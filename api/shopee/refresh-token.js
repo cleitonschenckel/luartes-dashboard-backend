@@ -1,43 +1,48 @@
-import axios from "axios";
-import crypto from "crypto";
+// api/shopee/refresh-token.js
+import axios from 'axios';
 
 export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { refresh_token, shop_id } = req.body;
+  const partnerId = process.env.PARTNER_ID;
+
+  if (!refresh_token || !shop_id) {
+    return res.status(400).json({
+      error: 'MISSING_PARAMS',
+      message: 'Envie "refresh_token" e "shop_id" no body (JSON).',
+    });
+  }
+
+  if (!partnerId) {
+    return res.status(500).json({
+      error: 'MISSING_ENV',
+      message: 'Variável PARTNER_ID não configurada na Vercel.',
+    });
+  }
+
   try {
-    const { refresh_token } = req.query;
-
-    if (!refresh_token) {
-      return res.status(400).json({ error: "refresh_token não informado" });
-    }
-
-    const PARTNER_ID = process.env.PARTNER_ID;
-    const PARTNER_KEY = process.env.PARTNER_KEY;
-    const SHOP_ID = process.env.SHOP_ID;
-
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    const baseString = `${PARTNER_ID}${refresh_token}${timestamp}`;
-    const sign = crypto
-      .createHmac("sha256", PARTNER_KEY)
-      .update(baseString)
-      .digest("hex");
-
-    const response = await axios.post(
-      "https://partner.shopeemobile.com/api/v2/auth/access_token/get",
+    const refreshResponse = await axios.post(
+      'https://partner.shopeemobile.com/api/v2/auth/access_token/get',
       {
-        partner_id: Number(PARTNER_ID),
         refresh_token,
-        shop_id: Number(SHOP_ID),
-        sign,
-        timestamp
+        partner_id: Number(partnerId),
+        shop_id: Number(shop_id),
       }
     );
 
-    res.status(200).json({
-      message: "Token renovado",
-      data: response.data
+    return res.status(200).json({
+      message: 'Token renovado com sucesso ✅',
+      shopee: refreshResponse.data,
     });
+  } catch (err) {
+    console.error('Erro ao renovar token na Shopee:', err.response?.data || err.message);
 
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({
+      error: 'REFRESH_FAILED',
+      details: err.response?.data || err.message,
+    });
   }
 }
