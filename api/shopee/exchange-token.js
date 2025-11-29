@@ -1,45 +1,48 @@
-import axios from "axios";
-import crypto from "crypto";
+// api/shopee/exchange-token.js
+import axios from 'axios';
 
 export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { code, shop_id } = req.body;
+  const partnerId = process.env.PARTNER_ID;
+
+  if (!code || !shop_id) {
+    return res.status(400).json({
+      error: 'MISSING_PARAMS',
+      message: 'Envie "code" e "shop_id" no body (JSON).',
+    });
+  }
+
+  if (!partnerId) {
+    return res.status(500).json({
+      error: 'MISSING_ENV',
+      message: 'Variável PARTNER_ID não configurada na Vercel.',
+    });
+  }
+
   try {
-    const { code } = req.query;
-
-    if (!code) {
-      return res.status(400).json({ error: "Código não informado" });
-    }
-
-    const PARTNER_ID = process.env.PARTNER_ID;
-    const PARTNER_KEY = process.env.PARTNER_KEY;
-    const SHOP_ID = process.env.SHOP_ID; // futuro para multiloja
-    const REDIRECT_URL = process.env.REDIRECT_URL;
-
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    // Geração do HMAC para autenticação
-    const baseString = `${PARTNER_ID}${code}${timestamp}`;
-    const sign = crypto
-      .createHmac("sha256", PARTNER_KEY)
-      .update(baseString)
-      .digest("hex");
-
-    const response = await axios.post(
-      "https://partner.shopeemobile.com/api/v2/auth/token/get",
+    const tokenResponse = await axios.post(
+      'https://partner.shopeemobile.com/api/v2/auth/token/get',
       {
         code,
-        partner_id: Number(PARTNER_ID),
-        shop_id: Number(SHOP_ID),
-        sign,
-        timestamp
+        partner_id: Number(partnerId),
+        shop_id: Number(shop_id),
       }
     );
 
-    res.status(200).json({
-      message: "Token obtido com sucesso",
-      data: response.data
+    return res.status(200).json({
+      message: 'Tokens obtidos com sucesso ✅',
+      shopee: tokenResponse.data,
     });
+  } catch (err) {
+    console.error('Erro ao trocar code por token (endpoint manual):', err.response?.data || err.message);
 
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    return res.status(500).json({
+      error: 'TOKEN_EXCHANGE_FAILED',
+      details: err.response?.data || err.message,
+    });
   }
 }
