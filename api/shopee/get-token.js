@@ -3,7 +3,7 @@ export default function handler(req, res) {
   const redirectUrl = process.env.REDIRECT_URL;
 
   const authURL =
-    `https://partner.shopeemobile.com/api/v2/authenticate?` +
+    'https://partner.sandbox.shopeemobile.com/api/v2/authenticate?' +
     `partner_id=${partnerId}` +
     `&redirect=${encodeURIComponent(redirectUrl)}`;
 
