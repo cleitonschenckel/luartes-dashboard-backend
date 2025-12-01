@@ -1,6 +1,6 @@
 // api/shopee/get-token.js
 
-import crypto from 'crypto';
+import { loadTokens } from '../../lib/tokenStore.js';
 
 export default function handler(req, res) {
   if (req.method !== 'GET') {
