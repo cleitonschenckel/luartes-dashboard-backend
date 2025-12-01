@@ -1,0 +1,13 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        { "type": "query", "key": "code" },
+        { "type": "query", "key": "shop_id" }
+      ],
+      "destination": "/api/shopee/exchange-token?code=:code&shop_id=:shop_id",
+      "permanent": false
+    }
+  ]
+}
