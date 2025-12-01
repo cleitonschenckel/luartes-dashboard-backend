@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { saveTokens } from '../../lib/tokenStore.js';
+import { saveTokens } from "../../lib/tokenStore.js";
 
 export default async function handler(req, res) {
   try {
@@ -25,9 +25,12 @@ export default async function handler(req, res) {
       `https://partner.shopeemobile.com${path}` +
       `?partner_id=${partnerId}&timestamp=${timestamp}&sign=${sign}`;
 
+    // BODY CORRETO EXIGIDO PELA SHOPEE
     const body = {
       code,
       shop_id: Number(shop_id),
+      partner_id: Number(partnerId),
+      partner_key: partnerKey
     };
 
     const shopeeResponse = await fetch(url, {
@@ -38,7 +41,6 @@ export default async function handler(req, res) {
 
     const data = await shopeeResponse.json();
 
-    // erro da Shopee?
     if (data.error) {
       return res.status(400).json({
         error: true,
@@ -47,22 +49,22 @@ export default async function handler(req, res) {
       });
     }
 
-    // sucesso → salvar no Supabase
     await saveTokens({
       access_token: data.access_token,
       refresh_token: data.refresh_token,
       expire_in: data.expire_in,
-      shop_id: Number(shop_id)
+      shop_id: Number(shop_id),
     });
 
-    return res.status(200).json({
+    return res.json({
       success: true,
-      message: "Tokens salvos com sucesso no Supabase ✔️",
-      shopee: data
+      tokens: data,
     });
 
-  } catch (e) {
-    console.error("Erro no exchange-token:", e);
-    return res.status(500).json({ error: true, details: e.message });
+  } catch (err) {
+    return res.status(500).json({
+      error: true,
+      details: err.message || err,
+    });
   }
 }
