@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { loadTokens, saveTokens, isTokenExpired } from "@/lib/tokenStore";
+import { loadTokens, saveTokens, isTokenExpired } from "../../lib/tokenStore.js";
 
 export default async function handler(req, res) {
   try {
