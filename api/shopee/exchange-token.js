@@ -1,3 +1,7 @@
+export const config = {
+  runtime: "nodejs",
+};
+
 import crypto from "crypto";
 import { saveTokens } from "../../lib/tokenStore.js";
 
@@ -8,28 +12,29 @@ export default async function handler(req, res) {
     if (!code || !shop_id)
       return res.status(400).json({ error: "Missing code or shop_id" });
 
-    const partnerId = Number(process.env.PARTNER_ID);
+    const partnerId = process.env.PARTNER_ID;
     const partnerKey = process.env.PARTNER_KEY;
 
     const timestamp = Math.floor(Date.now() / 1000);
     const path = "/api/v2/auth/token/get";
 
-    // assinatura HMAC V2
+    // SIGNATURE CORRETA
     const baseString = `${partnerId}${path}${timestamp}`;
     const sign = crypto
       .createHmac("sha256", partnerKey)
       .update(baseString)
       .digest("hex");
 
+    // URL FINAL
     const url =
       `https://partner.shopeemobile.com${path}` +
       `?partner_id=${partnerId}&timestamp=${timestamp}&sign=${sign}`;
 
-    // Body CORRETO da Shopee
+    // BODY CORRETO (SEM partner_key)
     const body = {
       code,
       shop_id: Number(shop_id),
-      partner_id: partnerId,
+      partner_id: Number(partnerId),
     };
 
     const shopeeResponse = await fetch(url, {
@@ -40,14 +45,15 @@ export default async function handler(req, res) {
 
     const data = await shopeeResponse.json();
 
-    if (data.error || data.message) {
+    if (data.error) {
       return res.status(400).json({
         error: true,
-        message: data.message || "Shopee error",
+        message: data.message,
         details: data,
       });
     }
 
+    // SALVAR TOKENS
     await saveTokens({
       access_token: data.access_token,
       refresh_token: data.refresh_token,
