@@ -1,64 +1,52 @@
-import crypto from 'crypto';
-import axios from 'axios';
+import crypto from "crypto";
+import { saveTokens } from "../../../lib/tokenStore.js";
 
 export default async function handler(req, res) {
   try {
-    const method = req.method || 'GET';
-    const payload = method === 'GET' ? req.query : req.body;
+    const { code, shop_id } = req.query;
 
-    const { code, shop_id } = payload || {};
-
-    if (!code || !shop_id) {
-      return res.status(400).json({
-        error: 'missing_params',
-        message: 'Parâmetros "code" e "shop_id" são obrigatórios.',
-        received: { code, shop_id },
-      });
-    }
+    if (!code || !shop_id)
+      return res.status(400).json({ error: "Missing code or shop_id" });
 
     const partnerId = process.env.PARTNER_ID;
     const partnerKey = process.env.PARTNER_KEY;
 
-    if (!partnerId || !partnerKey) {
-      return res.status(500).json({
-        error: 'missing_env',
-        message: 'PARTNER_ID ou PARTNER_KEY não configurados nas variáveis de ambiente.',
+    const timestamp = Math.floor(Date.now() / 1000);
+    const path = "/api/v2/auth/token/get";
+
+    const baseString = `${partnerId}${path}${timestamp}`;
+    const sign = crypto
+      .createHmac("sha256", partnerKey)
+      .update(baseString)
+      .digest("hex");
+
+    const url = `https://partner.shopeemobile.com${path}` +
+      `?partner_id=${partnerId}&timestamp=${timestamp}&sign=${sign}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, shop_id: Number(shop_id) }),
+    });
+
+    const data = await response.json();
+
+    // 👉 SALVAR OS TOKENS AQUI
+    if (data.access_token && data.refresh_token) {
+      saveTokens({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expire_in: data.expire_in,
+        shop_id: Number(shop_id),
       });
     }
 
-    const baseUrl = 'https://partner.shopeemobile.com';
-    const path = '/api/v2/auth/token/get';
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    const signBase = `${partnerId}${path}${timestamp}`;
-    const sign = crypto
-      .createHmac('sha256', partnerKey)
-      .update(signBase)
-      .digest('hex');
-
-    // ATENÇÃO: partner_id na query
-    const url = `${baseUrl}${path}?partner_id=${partnerId}&timestamp=${timestamp}&sign=${sign}`;
-
-    const body = {
-      code,
-      shop_id: Number(shop_id),
-      partner_id: Number(partnerId),
-    };
-
-    const { data } = await axios.post(url, body, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-
     return res.status(200).json({
-      message: 'Resposta da Shopee ao trocar code por tokens',
-      shopee: data,
+      message: "Tokens salvos com sucesso!",
+      shopee: data
     });
-  } catch (err) {
-    console.error('Erro em /api/shopee/exchange-token:', err.response?.data || err.message);
 
-    return res.status(500).json({
-      error: 'internal_error',
-      detail: err.response?.data || err.message,
-    });
+  } catch (e) {
+    return res.status(500).json({ error: true, details: e.message });
   }
 }
