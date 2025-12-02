@@ -2,6 +2,9 @@
   "name": "luartes-dashboard-backend",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
     "axios": "^1.6.0"
