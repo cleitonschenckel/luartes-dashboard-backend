@@ -1,15 +1,17 @@
 import crypto from "crypto";
-import { saveTokens, loadTokens, isTokenExpired } from '../../lib/tokenStore.js';
+import { saveTokens, loadTokens } from "../../lib/tokenStore.js";
 
 export default async function handler(req, res) {
   try {
-
     const stored = await loadTokens();
-    if (!stored)
-      return res.status(400).json({ error: "Nenhum token salvo no Supabase" });
 
-    if (!stored.refresh_token)
+    if (!stored) {
+      return res.status(400).json({ error: "Nenhum token salvo no Supabase" });
+    }
+
+    if (!stored.refresh_token) {
       return res.status(400).json({ error: "refresh_token ausente" });
+    }
 
     const partnerId = process.env.PARTNER_ID;
     const partnerKey = process.env.PARTNER_KEY;
@@ -35,25 +37,24 @@ export default async function handler(req, res) {
     const shopeeResponse = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
 
     const data = await shopeeResponse.json();
 
-    if (data.error) {
+    if (data.error && data.error !== "") {
       return res.status(400).json({
         error: true,
-        message: data.message || "Shopee error",
-        details: data,
+        message: data.message || "Erro na Shopee",
+        details: data
       });
     }
 
-    // salvar novos tokens
     await saveTokens({
       access_token: data.access_token,
       refresh_token: data.refresh_token,
       expire_in: data.expire_in,
-      shop_id: stored.shop_id,
+      shop_id: stored.shop_id
     });
 
     return res.status(200).json({
@@ -63,6 +64,9 @@ export default async function handler(req, res) {
     });
 
   } catch (e) {
-    return res.status(500).json({ error: true, details: e.message });
+    return res.status(500).json({
+      error: true,
+      details: e.message
+    });
   }
 }
