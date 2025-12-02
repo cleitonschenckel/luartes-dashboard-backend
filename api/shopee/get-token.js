@@ -1,5 +1,6 @@
 // api/shopee/get-token.js
 
+import crypto from 'crypto';
 import { loadTokens } from '../../lib/tokenStore.js';
 
 export default function handler(req, res) {
@@ -15,7 +16,7 @@ export default function handler(req, res) {
     return res.status(500).json({
       error: 'MISSING_ENV',
       message:
-        'Configure PARTNER_ID, PARTNER_KEY e REDIRECT_URL nas variáveis de ambiente da Vercel.',
+        'Configure PARTNER_ID, PARTNER_KEY e REDIRECT_URL nas variáveis de ambiente.',
       received: { partnerId, hasPartnerKey: !!partnerKey, redirectUrl },
     });
   }
@@ -24,10 +25,9 @@ export default function handler(req, res) {
   const baseUrl = 'https://partner.shopeemobile.com';
   const path = '/api/v2/shop/auth_partner';
 
-  // Shopee pede timestamp + assinatura
   const timestamp = Math.floor(Date.now() / 1000);
 
-  // String base para o HMAC (documentação Shopee v2)
+  // Shopee exige: sign = HMAC_SHA256(partner_id + path + timestamp, partner_key)
   const signBase = `${partnerId}${path}${timestamp}`;
 
   const sign = crypto
