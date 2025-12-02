@@ -1,5 +1,3 @@
-export const runtime = "nodejs";
-
 export default function handler(req, res) {
   try {
     const { code, shop_id } = req.query;
@@ -7,18 +5,18 @@ export default function handler(req, res) {
     if (!code || !shop_id) {
       return res.status(400).json({
         error: "invalid_callback",
-        detail: "Missing code or shop_id",
+        detail: "Missing code or shop_id"
       });
     }
 
-    // Redireciona automaticamente para trocar o token
-    const redirectUrl = `/api/shopee/exchange-token?code=${code}&shop_id=${shop_id}`;
-    return res.redirect(302, redirectUrl);
+    const redirectUrl =
+      `/api/shopee/exchange-token?code=${code}&shop_id=${shop_id}`;
 
+    return res.redirect(302, redirectUrl);
   } catch (err) {
     return res.status(500).json({
       error: "internal_error",
-      detail: err.message,
+      detail: err.message
     });
   }
 }
